@@ -11,3 +11,6 @@ wheels/
 
 # Configs
 mini.yaml
+
+# Secrets
+.env
