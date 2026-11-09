@@ -1,0 +1,15 @@
+# limits section missing
+dataset: ./data/tasks.jsonl
+prs: all
+attempts: 3
+verbose: true
+configs:
+  - name: baseline
+    agent_config: agents/baseline.yaml
+  - name: llvm-tools
+    agent_config: agents/llvm-tools.yaml
+run:
+  output: ./runs/experiment1
+  workers: 4
+score:
+  use: [build, pr-tests, alive2, llvm-mca]
