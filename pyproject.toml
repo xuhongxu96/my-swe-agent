@@ -18,6 +18,9 @@ mini = "mini:main"
 requires = ["uv_build>=0.12.20,<0.13.0"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+module-name = ["mini", "msaorch"]
+
 [tool.uv]
 # Exclude a specific package entirely from being installed
 exclude-dependencies = [
