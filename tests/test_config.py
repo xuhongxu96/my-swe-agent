@@ -21,13 +21,13 @@ def test_full_config():
     config = load_config(FIXTURES / "full.yaml")
 
     assert config == HarnessConfig(
-        dataset=Path("data/tasks.jsonl"),
+        dataset=FIXTURES / "data/tasks.jsonl",
         limits=Limits(step_limit=100, cost_limit_usd=5, wall_time_min=180),
         configs=[
             AgentSpec(name="baseline", agent_config=FIXTURES / "agents/baseline.yaml"),
             AgentSpec(name="llvm-tools", agent_config=FIXTURES / "agents/llvm-tools.yaml"),
         ],
-        run=RunSettings(output=Path("runs/experiment1"), workers=4),
+        run=RunSettings(output=FIXTURES / "runs/experiment1", workers=4),
         score=ScoreSettings(use=["build", "pr-tests", "alive2", "llvm-mca"]),
         prs=None,
         attempts=3,
@@ -56,23 +56,18 @@ def test_prs_empty_value_means_all():
     assert config.prs is None
 
 
-def test_agent_config_is_relative_to_config_file():
+def test_paths_are_relative_to_config_file():
     config = load_config(FIXTURES / "full.yaml")
 
+    assert config.dataset == FIXTURES / "data/tasks.jsonl"
     assert config.configs[0].agent_config == FIXTURES / "agents/baseline.yaml"
-
-
-def test_dataset_and_output_are_relative_to_working_directory():
-    config = load_config(FIXTURES / "full.yaml")
-
-    assert config.dataset == Path("data/tasks.jsonl")
-    assert config.run.output == Path("runs/experiment1")
+    assert config.run.output == FIXTURES / "runs/experiment1"
 
 
 def test_load_config_accepts_str_path():
     config = load_config(str(FIXTURES / "minimal.yaml"))
 
-    assert config.dataset == Path("data/tasks.jsonl")
+    assert config.dataset == FIXTURES / "data/tasks.jsonl"
 
 
 # ----------- Invalid configs ----------- #

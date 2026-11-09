@@ -55,6 +55,7 @@ def load_config(path: str | Path) -> HarnessConfig:
 
 
 def parse_config(data: dict[str, Any], config_dir: Path) -> HarnessConfig:
+    # all relative paths in the config are resolved against the config file's folder
     for key in data:
         if key not in ALLOWED_KEYS:
             raise ValueError(f"unknown config key: {key}")
@@ -66,7 +67,6 @@ def parse_config(data: dict[str, Any], config_dir: Path) -> HarnessConfig:
         wall_time_min=limits_data["wall_time_min"],
     )
 
-    # agent configs are resolved against the config file's folder
     configs = []
     for spec_data in data["configs"]:
         configs.append(
@@ -76,17 +76,16 @@ def parse_config(data: dict[str, Any], config_dir: Path) -> HarnessConfig:
             )
         )
 
-    # dataset and output are resolved against the current working directory
     run_data = data["run"]
     run = RunSettings(
-        output=Path(run_data["output"]),
+        output=config_dir / run_data["output"],
         workers=run_data.get("workers", 1),
     )
 
     score = ScoreSettings(use=data["score"]["use"])
 
     return HarnessConfig(
-        dataset=Path(data["dataset"]),
+        dataset=config_dir / data["dataset"],
         limits=limits,
         configs=configs,
         run=run,

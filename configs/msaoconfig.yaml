@@ -1,5 +1,7 @@
+# relative paths are resolved against this file's folder
+
 # basic config
-dataset: ./data/tasks.jsonl # TODO: placeholder path
+dataset: ../data/tasks.jsonl # TODO: placeholder path
 prs: all
 attempts: 3
 verbose: true
@@ -15,7 +17,7 @@ configs:                    # mini-swe-agent configurations
 
 # config for agent runner
 run:
-  output: ./runs/experiment1
+  output: ../runs/experiment1
   workers: 1
 
 # config for scorer
