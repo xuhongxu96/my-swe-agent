@@ -4,6 +4,7 @@ from typing import Any
 
 import yaml
 
+
 # ----------- Dataclass Definitions ----------- #
 @dataclass
 class Limits:
@@ -11,19 +12,23 @@ class Limits:
     cost_limit_usd: float
     wall_time_min: int
 
+
 @dataclass
 class AgentSpec:
     name: str
     agent_config: Path  # path to the mini-swe-agent yaml config
+
 
 @dataclass
 class RunSettings:
     output: Path
     workers: int = 1
 
+
 @dataclass
 class ScoreSettings:
     use: list[str]
+
 
 @dataclass
 class HarnessConfig:
@@ -39,7 +44,16 @@ class HarnessConfig:
 
 # ----------- Parser ----------- #
 
-ALLOWED_KEYS = ["dataset", "prs", "attempts", "verbose", "limits", "configs", "run", "score"]
+ALLOWED_KEYS = [
+    "dataset",
+    "prs",
+    "attempts",
+    "verbose",
+    "limits",
+    "configs",
+    "run",
+    "score",
+]
 
 
 def load_config(path: str | Path) -> HarnessConfig:

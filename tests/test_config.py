@@ -25,7 +25,9 @@ def test_full_config():
         limits=Limits(step_limit=100, cost_limit_usd=5, wall_time_min=180),
         configs=[
             AgentSpec(name="baseline", agent_config=FIXTURES / "agents/baseline.yaml"),
-            AgentSpec(name="llvm-tools", agent_config=FIXTURES / "agents/llvm-tools.yaml"),
+            AgentSpec(
+                name="llvm-tools", agent_config=FIXTURES / "agents/llvm-tools.yaml"
+            ),
         ],
         run=RunSettings(output=FIXTURES / "runs/experiment1", workers=4),
         score=ScoreSettings(use=["build", "pr-tests", "alive2", "llvm-mca"]),
