@@ -1,0 +1,18 @@
+# second agent has no agent_config
+dataset: ./data/tasks.jsonl
+prs: all
+attempts: 3
+verbose: true
+limits:
+  step_limit: 100
+  cost_limit_usd: 5
+  wall_time_min: 180
+configs:
+  - name: baseline
+    agent_config: agents/baseline.yaml
+  - name: llvm-tools
+run:
+  output: ./runs/experiment1
+  workers: 4
+score:
+  use: [build, pr-tests, alive2, llvm-mca]

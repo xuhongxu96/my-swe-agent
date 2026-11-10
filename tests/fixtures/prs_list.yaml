@@ -1,0 +1,13 @@
+dataset: ./data/tasks.jsonl
+prs: [123, 456]
+limits:
+  step_limit: 100
+  cost_limit_usd: 5
+  wall_time_min: 180
+configs:
+  - name: baseline
+    agent_config: agents/baseline.yaml
+run:
+  output: ./runs/experiment1
+score:
+  use: [build]

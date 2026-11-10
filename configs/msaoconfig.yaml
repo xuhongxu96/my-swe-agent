@@ -1,0 +1,25 @@
+# relative paths are resolved against this file's folder
+
+# basic config
+dataset: ../data/tasks.jsonl # TODO: placeholder path
+prs: all
+attempts: 3
+verbose: true
+limits:                     # overrides limits set in agent configs
+  step_limit: 100
+  cost_limit_usd: 5
+  wall_time_min: 180
+configs:                    # mini-swe-agent configurations
+  - name: baseline
+    agent_config: agents/baseline.yaml
+  - name: llvm-tools
+    agent_config: agents/llvm-tools.yaml
+
+# config for agent runner
+run:
+  output: ../runs/experiment1
+  workers: 1
+
+# config for scorer
+score:
+  use: [build, pr-tests, alive2, llvm-mca]
