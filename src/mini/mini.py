@@ -1,4 +1,5 @@
-"""This is the simplest possible example of how to use mini-SWE-agent with python bindings.
+"""This is the simplest possible example of how to use mini-SWE-agent
+with python bindings.
 """
 
 import logging
@@ -69,7 +70,9 @@ def main(
     ),
 ) -> DefaultAgent:
     logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger("LiteLLM").setLevel(logging.WARNING)  # its DEBUG logs print api_key in plain text
+    logging.getLogger("LiteLLM").setLevel(
+        logging.WARNING
+    )  # its DEBUG logs print api_key in plain text
 
     config = yaml.safe_load(Path(config_path).read_text())
     model_config = config["model"]
