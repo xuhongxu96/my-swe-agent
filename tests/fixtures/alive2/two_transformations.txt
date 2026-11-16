@@ -1,0 +1,47 @@
+
+----------------------------------------
+define i8 @foo(i8 %x) {
+#0:
+  %r = add i8 %x, 0
+  ret i8 %r
+}
+=>
+define i8 @foo(i8 %x) {
+#0:
+  ret i8 %x
+}
+Transformation seems to be correct!
+
+
+----------------------------------------
+define i8 @bar(i8 %x) {
+#0:
+  %r = mul i8 %x, 2
+  ret i8 %r
+}
+=>
+define i8 @bar(i8 %x) {
+#0:
+  %r = shl i8 %x, 2
+  ret i8 %r
+}
+Transformation doesn't verify!
+
+ERROR: Value mismatch
+
+Example:
+i8 %x = #x01 (1)
+
+Source:
+i8 %r = #x02 (2)
+
+Target:
+i8 %r = #x04 (4)
+Source value: #x02 (2)
+Target value: #x04 (4)
+
+Summary:
+  1 correct transformations
+  1 incorrect transformations
+  0 failed-to-prove transformations
+  0 Alive2 errors

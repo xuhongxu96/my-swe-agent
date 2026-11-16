@@ -2,8 +2,11 @@
 check that tgt refines src and return a structured result.
 """
 
-from dataclasses import dataclass, field
+import subprocess
+import tempfile
+from dataclasses import asdict, dataclass, field
 from enum import Enum
+from pathlib import Path
 
 # ----------- alive-tv Output Markers ----------- #
 # exact strings alive-tv prints (llvm_util/compare.cpp, tools/alive-tv.cpp in Alive2)
@@ -18,10 +21,10 @@ SUMMARY_HEADER = "Summary:"
 
 
 class Verdict(Enum):
-    CORRECT = "correct"            # every transformation verified
-    INCORRECT = "incorrect"        # at least one transformation has a counterexample
+    CORRECT = "correct"  # every transformation verified
+    INCORRECT = "incorrect"  # at least one transformation has a counterexample
     INCONCLUSIVE = "inconclusive"  # failed-to-prove, or nothing was checked
-    ERROR = "error"                # alive-tv missing, crashed, timed out, or bad IR
+    ERROR = "error"  # alive-tv missing, crashed, timed out, or bad IR
 
 
 @dataclass
@@ -47,6 +50,53 @@ class Alive2Result:
     error_message: str | None = None
     raw_output: str = ""
 
+    def to_dict(self) -> dict:
+        data = asdict(self)  # converts nested summary/failures too
+        data["verdict"] = self.verdict.value  # Enum isn't JSON-friendly, use its text
+        return data
+
+
+# ----------- Runner ----------- #
+
+
+# Run alive-tv on a pair of IR modules and return the parsed result.
+def verify(
+    src_ir: str,
+    tgt_ir: str,
+    *,
+    alive_tv: str | Path = "alive-tv",
+    timeout_s: int = 60,
+    smt_timeout_ms: int = 10_000,
+) -> Alive2Result:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        src_path = Path(tmp_dir) / "src.ll"
+        tgt_path = Path(tmp_dir) / "tgt.ll"
+        src_path.write_text(src_ir)
+        tgt_path.write_text(tgt_ir)
+
+        command = [
+            str(alive_tv),
+            f"--smt-to={smt_timeout_ms}",
+            str(src_path),
+            str(tgt_path),
+        ]
+        try:
+            completed = subprocess.run(
+                command, capture_output=True, text=True, timeout=timeout_s
+            )
+        except OSError as error:  # e.g. alive-tv not installed
+            return _error_result(f"could not run {alive_tv}: {error}")
+        except subprocess.TimeoutExpired:
+            return _error_result(f"alive-tv timed out after {timeout_s}s")
+
+    return parse_output(completed.stdout + completed.stderr)
+
+
+def _error_result(message: str) -> Alive2Result:
+    return Alive2Result(
+        verdict=Verdict.ERROR, summary=Alive2Summary(), error_message=message
+    )
+
 
 # ----------- Parser ----------- #
 
@@ -62,6 +112,8 @@ class Alive2Result:
     nothing checked at all    -> INCONCLUSIVE  (e.g. no function names matched)
     otherwise                 -> CORRECT
 """
+
+
 def parse_output(output: str) -> Alive2Result:
     summary = _parse_summary(output)
 
@@ -98,7 +150,8 @@ def parse_output(output: str) -> Alive2Result:
 
 """ 
 - Read the counts from the "Summary:" block alive-tv prints at the end.
-- Returns None if there is no summary, which means alive-tv stopped before reading anything
+- Returns None if there is no summary, which means alive-tv stopped before
+  reading anything
 
 - The summary looks like this (format from tools/alive-tv.cpp in Alive2):
 
@@ -108,6 +161,8 @@ def parse_output(output: str) -> Alive2Result:
          0 failed-to-prove transformations
          0 Alive2 errors
 """
+
+
 def _parse_summary(output: str) -> Alive2Summary | None:
 
     if SUMMARY_HEADER not in output:
@@ -140,6 +195,8 @@ def _parse_summary(output: str) -> Alive2Summary | None:
 
  reason is the text after "ERROR:", counterexample is everything from "Example:" on.
 """
+
+
 def _extract_failures(output: str) -> list[Alive2Failure]:
     # each transformation starts with a line of 40 dashes
     blocks = output.split(SEPARATOR)
