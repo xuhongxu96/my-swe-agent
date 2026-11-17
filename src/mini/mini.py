@@ -14,6 +14,8 @@ from minisweagent.agents.default import DefaultAgent
 from minisweagent.environments.local import LocalEnvironment
 from minisweagent.models.litellm_model import LitellmModel
 
+from mini.task_config import load_task_config
+
 app = typer.Typer()
 
 USER_AGENT = "my-swe-agent/0.1.0"
@@ -68,6 +70,9 @@ def main(
     config_path: str = typer.Option(
         ..., "-c", "--config", help="Config file path", show_default=False, prompt=True
     ),
+    task_config_path: str | None = typer.Option(
+        None, "--task-config", help="Task config (experimental condition)"
+    ),
 ) -> DefaultAgent:
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("LiteLLM").setLevel(
@@ -75,6 +80,10 @@ def main(
     )  # its DEBUG logs print api_key in plain text
 
     config = yaml.safe_load(Path(config_path).read_text())
+    if task_config_path:
+        tc = load_task_config(task_config_path)
+        config["agent"] = {**config["agent"], **tc.limits}
+        task = f"{task}\n\n{tc.render_addendum()}"
     model_config = config["model"]
 
     if "opencode.ai" in model_config.get("model_kwargs", {}).get("api_base", ""):

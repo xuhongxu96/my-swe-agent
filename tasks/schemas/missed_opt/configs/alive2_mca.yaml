@@ -1,0 +1,16 @@
+name: alive2_mca                 # condition id, copied into every result
+task: missed_opt                 # selects tasks/missed_opt/input.schema.json
+num_runs: 3                      # runs per issue; keep equal across configs
+prompt_addendum: |               # appended to the mini.yaml prompt
+  Verify transformations before submitting. Tools are listed below.
+tools:                           # tool access is the variable we measure
+  - name: alive-tv
+    doc: "alive-tv src.ll tgt.ll checks that tgt refines src."
+    timeout_s: 120
+  - name: llvm-mca
+    doc: "llvm-mca f.s estimates cycles and IPC (make assembly with llc)."
+    timeout_s: 60
+limits:                          # optional overrides of mini.yaml
+  step_limit: 50
+  cost_limit: 2.0
+signals: []                      # reserved: evaluation files shown to the agent (future)
