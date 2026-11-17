@@ -1,0 +1,10 @@
+name: baseline                   # condition id, copied into every result
+task: missed_opt                 # selects tasks/missed_opt/input.schema.json
+num_runs: 3                      # runs per issue; keep equal across configs
+prompt_addendum: |               # appended to the mini.yaml prompt
+  No domain tools are available. Use standard shell commands only.
+tools: []                        # baseline: no domain tools
+limits:                          # optional overrides of mini.yaml
+  step_limit: 50
+  cost_limit: 2.0
+signals: []                      # reserved: evaluation files shown to the agent (future)

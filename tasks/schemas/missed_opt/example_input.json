@@ -1,0 +1,6 @@
+{
+  "issue_id": "missed_opt-0001",
+  "title": "[example] Missed fold: add x, 0",
+  "description": "Original IR:\n define i32 @src(i32 %x) {\n   %a = add i32 %x, 0\n   ret i32 %a\n }\n\nOptimized IR:\n define i32 @tgt(i32 %x) {\n   ret i32 %x\n }",
+  "metadata": { "category": "example" }
+}

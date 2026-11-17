@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Missed-optimization instance",
+  "description": "One issue given to the agent. Written by the Task 2 driver, one file per issue.",
+  "type": "object",
+  "required": ["issue_id", "title", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "issue_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique across the whole dataset (all missed-optimization techniques), e.g. 'missed_opt-0017'."
+    },
+    "title": {
+      "type": "string",
+      "description": "Issue title."
+    },
+    "description": {
+      "type": "string",
+      "description": "Issue body. Usually contains the IR pair (original vs optimized)."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional free-form fields, e.g. source URL, LLVM commit, optimization category."
+    }
+  }
+}
