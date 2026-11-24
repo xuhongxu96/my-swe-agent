@@ -2,11 +2,12 @@
 check that tgt refines src and return a structured result.
 """
 
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
+
+from msaorch.scorers.utils import ToolError, run_tool
 
 # ----------- alive-tv Output Markers ----------- #
 # exact strings alive-tv prints (llvm_util/compare.cpp, tools/alive-tv.cpp in Alive2)
@@ -80,14 +81,12 @@ def verify(
             str(src_path),
             str(tgt_path),
         ]
+        # no check=True: alive-tv exits 0 even when a transformation is
+        # incorrect, so the verdict comes from parsing the output instead
         try:
-            completed = subprocess.run(
-                command, capture_output=True, text=True, timeout=timeout_s
-            )
-        except OSError as error:  # e.g. alive-tv not installed
-            return _error_result(f"could not run {alive_tv}: {error}")
-        except subprocess.TimeoutExpired:
-            return _error_result(f"alive-tv timed out after {timeout_s}s")
+            completed = run_tool(command, timeout_s)
+        except ToolError as error:
+            return _error_result(str(error))
 
     return parse_output(completed.stdout + completed.stderr)
 
