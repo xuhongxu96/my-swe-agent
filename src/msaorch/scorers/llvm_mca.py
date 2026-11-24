@@ -4,8 +4,15 @@ compile both to assembly, estimate their performance, and return a structured
 comparison.
 """
 
+import json
 from dataclasses import asdict, dataclass
 from enum import Enum
+
+# ----------- llvm-mca JSON Keys ----------- #
+# exact keys llvm-mca prints with --json (tools/llvm-mca/Views/SummaryView.cpp in LLVM)
+
+CODE_REGIONS = "CodeRegions"
+SUMMARY_VIEW = "SummaryView"
 
 # ----------- Result Types ----------- #
 
@@ -40,3 +47,49 @@ class McaResult:
         data = asdict(self)                   # converts nested src/tgt stats too
         data["verdict"] = self.verdict.value  # Enum isn't JSON-friendly, use its text
         return data
+
+
+# ----------- Parser ----------- #
+
+
+"""
+- Read the stats from the "SummaryView" of llvm-mca's --json output.
+- Returns None if the output isn't valid JSON or has no code region, which
+  means llvm-mca failed (it prints nothing to stdout on errors)
+
+- The summary looks like this (one per code region):
+
+    "SummaryView": {
+      "BlockRThroughput": 1,
+      "DispatchWidth": 6,
+      "IPC": 1.834862385321101,
+      "Instructions": 200,
+      "Iterations": 100,
+      "TotalCycles": 109,
+      "TotaluOps": 400,
+      "uOpsPerCycle": 3.669724770642202
+    }
+"""
+
+
+def _parse_stats(output: str) -> McaStats | None:
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        return None
+
+    regions = data.get(CODE_REGIONS, [])
+    if not regions:
+        return None
+
+    summary = regions[0][SUMMARY_VIEW]
+
+    return McaStats(
+        iterations=summary["Iterations"],
+        instructions=summary["Instructions"],
+        total_cycles=summary["TotalCycles"],
+        total_uops=summary["TotaluOps"],
+        ipc=summary["IPC"],
+        # JSON writes whole numbers like 1.0 as 1, so make it a float again
+        block_rthroughput=float(summary["BlockRThroughput"]),
+    )
