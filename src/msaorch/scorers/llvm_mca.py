@@ -5,11 +5,12 @@ comparison.
 """
 
 import json
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
+
+from msaorch.scorers.utils import ToolError, run_tool
 
 # ----------- llvm-mca JSON Keys ----------- #
 # exact keys llvm-mca prints with --json (tools/llvm-mca/Views/SummaryView.cpp in LLVM)
@@ -78,37 +79,17 @@ def analyze(
 
             llc_command = [str(llc), *target_flags, str(ir_path), "-o", str(asm_path)]
             mca_command = [str(llvm_mca), *target_flags, "--json", str(asm_path)]
+            # a failed llc/llvm-mca prints nothing useful to stdout, so the
+            # exit code is the only reliable signal (check=True)
             try:
-                _run_tool(llc_command, timeout_s)
-                outputs.append(_run_tool(mca_command, timeout_s))
+                run_tool(llc_command, timeout_s, check=True)
+                completed = run_tool(mca_command, timeout_s, check=True)
             except ToolError as error:
                 return _error_result(f"{name}: {error}")
+            outputs.append(completed.stdout)
 
     src_output, tgt_output = outputs
     return compare(src_output, tgt_output)
-
-
-class ToolError(Exception):
-    pass
-
-
-# Run one tool and return its stdout, or raise ToolError if it didn't succeed.
-def _run_tool(command: list[str], timeout_s: int) -> str:
-    try:
-        completed = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout_s
-        )
-    except OSError as error:  # e.g. llc not installed
-        raise ToolError(f"could not run {command[0]}: {error}") from error
-    except subprocess.TimeoutExpired as error:
-        raise ToolError(f"{command[0]} timed out after {timeout_s}s") from error
-
-    # unlike alive-tv, a failed llc/llvm-mca prints nothing useful to stdout,
-    # so the exit code is the only reliable signal and stderr has the reason
-    if completed.returncode != 0:
-        raise ToolError(f"{command[0]} failed: {completed.stderr.strip()}")
-
-    return completed.stdout
 
 
 def _error_result(message: str) -> McaResult:
