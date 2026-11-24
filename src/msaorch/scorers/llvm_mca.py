@@ -5,8 +5,11 @@ comparison.
 """
 
 import json
+import subprocess
+import tempfile
 from dataclasses import asdict, dataclass
 from enum import Enum
+from pathlib import Path
 
 # ----------- llvm-mca JSON Keys ----------- #
 # exact keys llvm-mca prints with --json (tools/llvm-mca/Views/SummaryView.cpp in LLVM)
@@ -18,19 +21,19 @@ SUMMARY_VIEW = "SummaryView"
 
 
 class Verdict(Enum):
-    IMPROVED = "improved"    # tgt takes fewer simulated cycles than src
+    IMPROVED = "improved"  # tgt takes fewer simulated cycles than src
     REGRESSED = "regressed"  # tgt takes more simulated cycles than src
     UNCHANGED = "unchanged"  # same number of simulated cycles
-    ERROR = "error"          # llc/llvm-mca missing, crashed, timed out, or bad IR
+    ERROR = "error"  # llc/llvm-mca missing, crashed, timed out, or bad IR
 
 
 @dataclass
 class McaStats:
-    iterations: int    # how many times llvm-mca simulated the code (default 100)
+    iterations: int  # how many times llvm-mca simulated the code (default 100)
     instructions: int  # instructions executed across all iterations
     total_cycles: int  # simulated cycles across all iterations
     total_uops: int
-    ipc: float         # instructions per cycle
+    ipc: float  # instructions per cycle
     # estimated cycles per iteration, from port usage only (ignores latency)
     block_rthroughput: float
 
@@ -44,9 +47,72 @@ class McaResult:
     raw_output: str = ""
 
     def to_dict(self) -> dict:
-        data = asdict(self)                   # converts nested src/tgt stats too
+        data = asdict(self)  # converts nested src/tgt stats too
         data["verdict"] = self.verdict.value  # Enum isn't JSON-friendly, use its text
         return data
+
+
+# ----------- Runner ----------- #
+
+
+# Compile src and tgt to assembly with llc, run llvm-mca on both, and compare.
+def analyze(
+    src_ir: str,
+    tgt_ir: str,
+    *,
+    llc: str | Path = "llc",
+    llvm_mca: str | Path = "llvm-mca",
+    # pinned so results don't depend on the machine running the scorer
+    triple: str = "x86_64-unknown-linux-gnu",
+    mcpu: str = "skylake",
+    timeout_s: int = 60,  # per tool call, so up to 4x this in total
+) -> McaResult:
+    target_flags = [f"-mtriple={triple}", f"-mcpu={mcpu}"]
+    outputs = []
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        for name, ir in [("src", src_ir), ("tgt", tgt_ir)]:
+            ir_path = Path(tmp_dir) / f"{name}.ll"
+            asm_path = Path(tmp_dir) / f"{name}.s"
+            ir_path.write_text(ir)
+
+            llc_command = [str(llc), *target_flags, str(ir_path), "-o", str(asm_path)]
+            mca_command = [str(llvm_mca), *target_flags, "--json", str(asm_path)]
+            try:
+                _run_tool(llc_command, timeout_s)
+                outputs.append(_run_tool(mca_command, timeout_s))
+            except ToolError as error:
+                return _error_result(f"{name}: {error}")
+
+    src_output, tgt_output = outputs
+    return compare(src_output, tgt_output)
+
+
+class ToolError(Exception):
+    pass
+
+
+# Run one tool and return its stdout, or raise ToolError if it didn't succeed.
+def _run_tool(command: list[str], timeout_s: int) -> str:
+    try:
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout_s
+        )
+    except OSError as error:  # e.g. llc not installed
+        raise ToolError(f"could not run {command[0]}: {error}") from error
+    except subprocess.TimeoutExpired as error:
+        raise ToolError(f"{command[0]} timed out after {timeout_s}s") from error
+
+    # unlike alive-tv, a failed llc/llvm-mca prints nothing useful to stdout,
+    # so the exit code is the only reliable signal and stderr has the reason
+    if completed.returncode != 0:
+        raise ToolError(f"{command[0]} failed: {completed.stderr.strip()}")
+
+    return completed.stdout
+
+
+def _error_result(message: str) -> McaResult:
+    return McaResult(verdict=Verdict.ERROR, src=None, tgt=None, error_message=message)
 
 
 # ----------- Parser ----------- #

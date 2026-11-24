@@ -1,0 +1,157 @@
+{
+  "CodeRegions": [
+    {
+      "InstructionInfoView": {
+        "InstructionList": [
+          {
+            "Instruction": 0,
+            "Latency": 3,
+            "NumMicroOpcodes": 1,
+            "RThroughput": 1,
+            "hasUnmodeledSideEffects": false,
+            "mayLoad": false,
+            "mayStore": false
+          },
+          {
+            "Instruction": 1,
+            "Latency": 3,
+            "NumMicroOpcodes": 1,
+            "RThroughput": 1,
+            "hasUnmodeledSideEffects": false,
+            "mayLoad": false,
+            "mayStore": false
+          },
+          {
+            "Instruction": 2,
+            "Latency": 1,
+            "NumMicroOpcodes": 1,
+            "RThroughput": 0.5,
+            "hasUnmodeledSideEffects": false,
+            "mayLoad": false,
+            "mayStore": false
+          },
+          {
+            "Instruction": 3,
+            "Latency": 7,
+            "NumMicroOpcodes": 3,
+            "RThroughput": 1,
+            "hasUnmodeledSideEffects": true,
+            "mayLoad": false,
+            "mayStore": false
+          }
+        ]
+      },
+      "Instructions": [
+        "imull\t%edi, %esi",
+        "imull\t%edi, %edx",
+        "leal\t(%rdx,%rsi), %eax",
+        "retq"
+      ],
+      "Name": "",
+      "ResourcePressureView": {
+        "ResourcePressureInfo": [
+          {
+            "InstructionIndex": 0,
+            "ResourceIndex": 3,
+            "ResourceUsage": 1
+          },
+          {
+            "InstructionIndex": 1,
+            "ResourceIndex": 3,
+            "ResourceUsage": 1
+          },
+          {
+            "InstructionIndex": 2,
+            "ResourceIndex": 7,
+            "ResourceUsage": 1
+          },
+          {
+            "InstructionIndex": 3,
+            "ResourceIndex": 2,
+            "ResourceUsage": 0.90000000000000002
+          },
+          {
+            "InstructionIndex": 3,
+            "ResourceIndex": 4,
+            "ResourceUsage": 0.5
+          },
+          {
+            "InstructionIndex": 3,
+            "ResourceIndex": 5,
+            "ResourceUsage": 0.5
+          },
+          {
+            "InstructionIndex": 3,
+            "ResourceIndex": 7,
+            "ResourceUsage": 0.10000000000000001
+          },
+          {
+            "InstructionIndex": 3,
+            "ResourceIndex": 8,
+            "ResourceUsage": 1
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 2,
+            "ResourceUsage": 0.90000000000000002
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 3,
+            "ResourceUsage": 2
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 4,
+            "ResourceUsage": 0.5
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 5,
+            "ResourceUsage": 0.5
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 7,
+            "ResourceUsage": 1.1000000000000001
+          },
+          {
+            "InstructionIndex": 4,
+            "ResourceIndex": 8,
+            "ResourceUsage": 1
+          }
+        ]
+      },
+      "SummaryView": {
+        "BlockRThroughput": 2,
+        "DispatchWidth": 6,
+        "IPC": 1.3114754098360655,
+        "Instructions": 400,
+        "Iterations": 100,
+        "TotalCycles": 305,
+        "TotaluOps": 600,
+        "uOpsPerCycle": 1.9672131147540983
+      }
+    }
+  ],
+  "SimulationParameters": {
+    "-march": "x86_64",
+    "-mcpu": "skylake",
+    "-mtriple": "x86_64-unknown-linux-gnu"
+  },
+  "TargetInfo": {
+    "CPUName": "skylake",
+    "Resources": [
+      "SKLDivider",
+      "SKLFPDivider",
+      "SKLPort0",
+      "SKLPort1",
+      "SKLPort2",
+      "SKLPort3",
+      "SKLPort4",
+      "SKLPort5",
+      "SKLPort6",
+      "SKLPort7"
+    ]
+  }
+}
