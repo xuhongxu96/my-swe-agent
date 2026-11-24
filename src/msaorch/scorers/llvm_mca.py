@@ -53,6 +53,45 @@ class McaResult:
 
 
 """
+- Turn the llvm-mca outputs for src and tgt into an McaResult.
+- The verdict compares TotalCycles, checked in this order:
+
+    either side has no stats   -> ERROR      (llvm-mca failed on that side)
+    tgt cycles < src cycles    -> IMPROVED
+    tgt cycles > src cycles    -> REGRESSED
+    otherwise                  -> UNCHANGED
+
+- TotalCycles is used over BlockRThroughput because it is simulated, so it
+  also counts time spent waiting on dependencies (BlockRThroughput doesn't)
+"""
+
+
+def compare(src_output: str, tgt_output: str) -> McaResult:
+    src = _parse_stats(src_output)
+    tgt = _parse_stats(tgt_output)
+    raw_output = f"--- src ---\n{src_output}\n--- tgt ---\n{tgt_output}"
+
+    if src is None or tgt is None:
+        failed_side = "src" if src is None else "tgt"
+        return McaResult(
+            verdict=Verdict.ERROR,
+            src=src,
+            tgt=tgt,
+            error_message=f"llvm-mca gave no stats for {failed_side}",
+            raw_output=raw_output,
+        )
+
+    if tgt.total_cycles < src.total_cycles:
+        verdict = Verdict.IMPROVED
+    elif tgt.total_cycles > src.total_cycles:
+        verdict = Verdict.REGRESSED
+    else:
+        verdict = Verdict.UNCHANGED
+
+    return McaResult(verdict=verdict, src=src, tgt=tgt, raw_output=raw_output)
+
+
+"""
 - Read the stats from the "SummaryView" of llvm-mca's --json output.
 - Returns None if the output isn't valid JSON or has no code region, which
   means llvm-mca failed (it prints nothing to stdout on errors)
