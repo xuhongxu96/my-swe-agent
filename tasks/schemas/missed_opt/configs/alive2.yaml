@@ -1,0 +1,13 @@
+name: alive2
+task: missed_opt
+num_runs: 3
+prompt_addendum: |
+  Verify transformations with alive-tv before submitting. Tools are listed below.
+tools:
+  - name: alive-tv
+    doc: "alive-tv src.ll tgt.ll checks that tgt refines src."
+    timeout_s: 120
+limits:
+  step_limit: 50
+  cost_limit: 2.0
+signals: []

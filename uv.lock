@@ -774,6 +774,7 @@ name = "mini"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "jsonschema" },
     { name = "mini-swe-agent" },
     { name = "pyyaml" },
 ]
@@ -786,6 +787,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mini-swe-agent", specifier = ">=2.4.6" },
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
