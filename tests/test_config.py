@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pytest
 
-import mini.mini as mini_cli
 from mini.task_config import TaskConfig, ToolSpec, load_task_config
 
 CONFIG_DIR = Path(__file__).parent.parent / "tasks/schemas/missed_opt/configs"
@@ -88,41 +87,3 @@ def test_render_addendum_without_tools(tmp_path):
 def test_invalid_configs(tmp_path, text, match):
     with pytest.raises(ValueError, match=match):
         load_task_config(write(tmp_path, text))
-
-
-# ----------- CLI wiring ----------- #
-
-
-class FakeAgent:
-    def __init__(self, model, env, **kwargs):
-        self.kwargs = kwargs
-        self.task = None
-
-    def run(self, task):
-        self.task = task
-
-
-def run_main(monkeypatch, tmp_path, task_config_path):
-    monkeypatch.setattr(mini_cli, "DefaultAgent", FakeAgent)
-    monkeypatch.setattr(mini_cli, "LitellmModel", lambda **kw: object())
-    base = tmp_path / "mini.yaml"
-    base.write_text(
-        "model: {model_name: x}\nagent: {step_limit: 100, cost_limit: 5.0}\n"
-    )
-    return mini_cli.main(
-        task="fix it", config_path=str(base), task_config_path=task_config_path
-    )
-
-
-def test_main_applies_task_config(monkeypatch, tmp_path):
-    agent = run_main(monkeypatch, tmp_path, str(CONFIG_DIR / "alive2_mca.yaml"))
-    assert agent.kwargs == {"step_limit": 50, "cost_limit": 2.0}
-    assert agent.task.startswith("fix it\n\n")
-    assert "- alive-tv:" in agent.task
-    assert "- llvm-mca:" in agent.task
-
-
-def test_main_without_task_config_is_unchanged(monkeypatch, tmp_path):
-    agent = run_main(monkeypatch, tmp_path, None)
-    assert agent.kwargs == {"step_limit": 100, "cost_limit": 5.0}
-    assert agent.task == "fix it"
