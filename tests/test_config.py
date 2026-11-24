@@ -2,88 +2,119 @@ from pathlib import Path
 
 import pytest
 
-from mini.task_config import TaskConfig, ToolSpec, load_task_config
+from msaorch.config import (
+    AgentSpec,
+    HarnessConfig,
+    Limits,
+    RunSettings,
+    ScoreSettings,
+    load_config,
+)
 
-CONFIG_DIR = Path(__file__).parent.parent / "tasks/schemas/missed_opt/configs"
-
-VALID = """\
-name: demo
-task: missed_opt
-tools:
-  - name: alive-tv
-    doc: checks refinement
-"""
-
-
-def write(tmp_path, text):
-    p = tmp_path / "tc.yaml"
-    p.write_text(text)
-    return p
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 # ----------- Valid configs ----------- #
 
 
-@pytest.mark.parametrize("name", ["baseline", "alive2", "alive2_mca"])
-def test_repo_configs_load(name):
-    tc = load_task_config(CONFIG_DIR / f"{name}.yaml")
-    assert tc.name == name
-    assert tc.task == "missed_opt"
+def test_full_config():
+    config = load_config(FIXTURES / "full.yaml")
 
-
-def test_tool_access_differs_by_condition():
-    names = {
-        n: load_task_config(CONFIG_DIR / f"{n}.yaml").tool_names
-        for n in ("baseline", "alive2", "alive2_mca")
-    }
-    assert names["baseline"] == frozenset()
-    assert names["alive2"] == {"alive-tv"}
-    assert names["alive2_mca"] == {"alive-tv", "llvm-mca"}
-
-
-def test_defaults(tmp_path):
-    tc = load_task_config(write(tmp_path, VALID))
-    assert tc == TaskConfig(
-        name="demo",
-        task="missed_opt",
-        num_runs=1,
-        tools=(ToolSpec(name="alive-tv", doc="checks refinement"),),
+    assert config == HarnessConfig(
+        dataset=FIXTURES / "data/tasks.jsonl",
+        limits=Limits(step_limit=100, cost_limit_usd=5, wall_time_min=180),
+        configs=[
+            AgentSpec(name="baseline", agent_config=FIXTURES / "agents/baseline.yaml"),
+            AgentSpec(
+                name="llvm-tools", agent_config=FIXTURES / "agents/llvm-tools.yaml"
+            ),
+        ],
+        run=RunSettings(output=FIXTURES / "runs/experiment1", workers=4),
+        score=ScoreSettings(use=["build", "pr-tests", "alive2", "llvm-mca"]),
+        prs=None,
+        attempts=3,
+        verbose=True,
     )
 
 
-def test_render_addendum(tmp_path):
-    tc = load_task_config(write(tmp_path, VALID + "prompt_addendum: Be careful.\n"))
-    assert tc.render_addendum() == (
-        "Be careful.\nAvailable domain tools:\n- alive-tv: checks refinement"
-    )
+def test_minimal_config_uses_defaults():
+    config = load_config(FIXTURES / "minimal.yaml")
+
+    assert config.prs is None
+    assert config.attempts == 1
+    assert config.verbose is False
+    assert config.run.workers == 1
 
 
-def test_render_addendum_without_tools(tmp_path):
-    text = "name: b\ntask: t\ntools: []\nprompt_addendum: Shell only.\n"
-    assert load_task_config(write(tmp_path, text)).render_addendum() == "Shell only."
+def test_prs_list():
+    config = load_config(FIXTURES / "prs_list.yaml")
+
+    assert config.prs == [123, 456]
+
+
+def test_prs_empty_value_means_all():
+    config = load_config(FIXTURES / "prs_empty_value.yaml")
+
+    assert config.prs is None
+
+
+def test_paths_are_relative_to_config_file():
+    config = load_config(FIXTURES / "full.yaml")
+
+    assert config.dataset == FIXTURES / "data/tasks.jsonl"
+    assert config.configs[0].agent_config == FIXTURES / "agents/baseline.yaml"
+    assert config.run.output == FIXTURES / "runs/experiment1"
+
+
+def test_load_config_accepts_str_path():
+    config = load_config(str(FIXTURES / "minimal.yaml"))
+
+    assert config.dataset == FIXTURES / "data/tasks.jsonl"
 
 
 # ----------- Invalid configs ----------- #
 
 
-@pytest.mark.parametrize(
-    ("text", "match"),
-    [
-        ("- a\n- b\n", "top level"),
-        (VALID + "extra: 1\n", "unknown keys"),
-        ("name: x\ntask: t\n", "missing keys"),
-        (VALID + "num_runs: 0\n", "num_runs"),
-        (VALID + "num_runs: '3'\n", "num_runs"),
-        (VALID + "num_runs: true\n", "num_runs"),
-        ("name: x\ntask: t\ntools:\n  - name: a\n", "'name' and 'doc'"),
-        ("name: x\ntask: t\ntools:\n  - {name: a, doc: d, flag: 1}\n", "tool keys"),
-        (
-            "name: x\ntask: t\ntools:\n  - {name: a, doc: d}\n  - {name: a, doc: e}\n",
-            "duplicate",
-        ),
-        (VALID + "limits:\n  wall_time_min: 5\n", "unknown limits"),
-    ],
-)
-def test_invalid_configs(tmp_path, text, match):
-    with pytest.raises(ValueError, match=match):
-        load_task_config(write(tmp_path, text))
+def test_empty_file_is_rejected():
+    with pytest.raises(ValueError, match="expected a mapping at the top level"):
+        load_config(FIXTURES / "empty.yaml")
+
+
+def test_top_level_list_is_rejected():
+    with pytest.raises(ValueError, match="expected a mapping at the top level"):
+        load_config(FIXTURES / "top_level_list.yaml")
+
+
+def test_unknown_key_is_rejected():
+    with pytest.raises(ValueError, match="unknown config key: attempt"):
+        load_config(FIXTURES / "unknown_key.yaml")
+
+
+def test_prs_typo_is_rejected():
+    with pytest.raises(ValueError, match="prs must be 'all' or a list of PR numbers"):
+        load_config(FIXTURES / "prs_typo.yaml")
+
+
+def test_prs_single_int_is_rejected():
+    with pytest.raises(ValueError, match="prs must be 'all' or a list of PR numbers"):
+        load_config(FIXTURES / "prs_single_int.yaml")
+
+
+def test_prs_as_strings_is_rejected():
+    with pytest.raises(ValueError, match="PR numbers must be integers"):
+        load_config(FIXTURES / "prs_strings.yaml")
+
+
+def test_missing_limits_is_rejected():
+    with pytest.raises(KeyError, match="limits"):
+        load_config(FIXTURES / "missing_limits.yaml")
+
+
+def test_missing_agent_config_is_rejected():
+    with pytest.raises(KeyError, match="agent_config"):
+        load_config(FIXTURES / "missing_agent_config.yaml")
+
+
+def test_missing_file_is_rejected():
+    with pytest.raises(FileNotFoundError):
+        load_config(FIXTURES / "does_not_exist.yaml")
