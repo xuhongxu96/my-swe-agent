@@ -1,0 +1,37 @@
+----------------------------------------
+define i8 @src(i8 %x, i8 %y) {
+entry:
+  %cmp = icmp sgt i8 %x, %y
+  br i1 %cmp, label %then, label %else
+
+else:
+  %b = sub i8 %y, %x
+  br label %end
+
+then:
+  %a = sub i8 %x, %y
+  br label %end
+
+end:
+  %r = phi i8 [ %a, %then ], [ %b, %else ]
+  %m = mul i8 %r, 8
+  %z = add i8 %m, 0
+  ret i8 %z
+}
+=>
+define i8 @tgt(i8 %x, i8 %y) {
+entry:
+  %cmp = icmp sgt i8 %x, %y
+  %a = sub i8 %x, %y
+  %b = sub i8 %y, %x
+  %r = select i1 %cmp, i8 %a, i8 %b
+  %m = shl i8 %r, 3
+  ret i8 %m
+}
+Transformation seems to be correct!
+
+Summary:
+  1 correct transformations
+  0 incorrect transformations
+  0 failed-to-prove transformations
+  0 Alive2 errors
